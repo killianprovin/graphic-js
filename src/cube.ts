@@ -1,4 +1,10 @@
 // src/cube.ts
+import { BlockType, getBlockColor } from './block.js';
+
+export interface Cube extends CubeTemplate {
+  color: [number, number, number];
+  blockType: BlockType; // Nouveau champ pour le type de bloc
+}
 
 export interface Point3D {
   x: number;
@@ -13,10 +19,6 @@ export interface CubeTemplate {
   points: Point3D[];
   edges: Edge[];
   faces: Face[];
-}
-
-export interface Cube extends CubeTemplate {
-  color: [number, number, number];
 }
 
 export const cubeTemplate: CubeTemplate = {
@@ -48,15 +50,21 @@ export const cubeTemplate: CubeTemplate = {
 export function createCube(
   template: CubeTemplate,
   position: Point3D,
-  color: [number, number, number] = [128, 128, 128]
+  blockType: BlockType
 ): Cube {
+  const points = template.points.map(point => ({
+    x: point.x + position.x,
+    y: point.y + position.y,
+    z: point.z + position.z
+  }));
+
+  const color = getBlockColor(blockType);
+
   return {
-    ...template,
-    points: template.points.map(point => ({
-      x: point.x + position.x,
-      y: point.y + position.y,
-      z: point.z + position.z
-    })),
-    color
+    points,
+    edges: template.edges,
+    faces: template.faces,
+    color,
+    blockType
   };
 }

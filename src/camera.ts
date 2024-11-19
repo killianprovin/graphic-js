@@ -17,12 +17,12 @@ export interface Vector3D {
   
   export function createCamera(): Camera {
     return {
-      position: { x: 0, y: 0, z: 2 },
+      position: { x: 0, y: 0, z: 20 },
       yaw: 0,
       pitch: 0,
       fov: 60,
       z_near: 0.1,
-      z_far: 30
+      z_far: 64
     };
   }
   

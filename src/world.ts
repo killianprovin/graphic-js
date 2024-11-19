@@ -1,38 +1,44 @@
 // src/world.ts
-
-import { Cube, createCube, cubeTemplate } from './cube.js';
 import { Vector3D } from './camera.js';
+import { Cube, createCube, cubeTemplate } from './cube.js';
+import { BlockType } from './block.js';
 
+export interface Chunk {
+  c_x: number;
+  c_y: number;
+  cubes: Cube[];
+}
 
-export function createFloor(
-  size: number,
-  height: number,
-  color: [number, number, number]
-): Cube[] {
-  const halfSize = Math.floor(size / 2);
-  const floor: Cube[] = [];
-  for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-      floor.push(
+// Fonction pour créer un chunk à la position donnée
+export function createChunk(c_x: number, c_y: number, chunkSize: number): Chunk {
+  const cubes: Cube[] = [];
+
+  for (let x_b = 0; x_b < chunkSize; x_b++) {
+    for (let y_b = 0; y_b < chunkSize; y_b++) {
+      const worldX = c_x * chunkSize + x_b;
+      const worldY = c_y * chunkSize + y_b;
+
+      // Générer une hauteur pour le terrain (par exemple, une fonction simple)
+      const height = generateHeight(worldX, worldY);
+
+      // Déterminer le type de bloc en fonction de la hauteur
+      const blockType = getBlockTypeAtHeight(height);
+
+      cubes.push(
         createCube(
           cubeTemplate,
-          { x: x - halfSize, y: y - halfSize, z: height },
-          color
+          { x: worldX, y: worldY, z: height },
+          blockType
         )
       );
     }
   }
-  return floor;
-}
 
-export function createWorld(): Cube[] {
-  return [
-    createCube(cubeTemplate, { x: 0, y: 0, z: 0 }, [0, 255, 0]),
-    createCube(cubeTemplate, { x: 2, y: 0, z: 0 }, [255, 0, 0]),
-    createCube(cubeTemplate, { x: 0, y: 2, z: 0 }, [0, 255, 0]),
-    createCube(cubeTemplate, { x: 2, y: 2, z: 0 }, [0, 255, 0]),
-    ...createFloor(201, -1, [127, 127, 127])
-  ];
+  return {
+    c_x,
+    c_y,
+    cubes,
+  };
 }
 
 export function calculateDistance(cube: Cube, cameraPosition: Vector3D): number {
@@ -52,10 +58,32 @@ export function calculateDistance(cube: Cube, cameraPosition: Vector3D): number 
   return dx * dx + dy * dy + dz * dz;
 }
 
+function generateHeight(x: number, y: number): number {
+  // Exemple simple : un terrain ondulé avec une sinusoïde
+  const frequency = 0.1;
+  const amplitude = 5;
+
+  const height = Math.floor(
+    Math.sin(x * frequency) * amplitude + Math.cos(y * frequency) * amplitude
+  );
+
+  return height;
+}
+
 export function sortCubesByDistance(world: Cube[], cameraPosition: Vector3D): Cube[] {
   return world.sort((a, b) => {
     const distanceA = calculateDistance(a, cameraPosition);
     const distanceB = calculateDistance(b, cameraPosition);
     return distanceB - distanceA;
   });
+}
+
+export function getBlockTypeAtHeight(height: number): BlockType {
+  if (height >= 0) {
+    return BlockType.Grass;
+  } else if (height >= -3) {
+    return BlockType.Dirt;
+  } else {
+    return BlockType.Stone;
+  }
 }

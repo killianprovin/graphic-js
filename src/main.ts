@@ -1,6 +1,7 @@
 import { Camera, createCamera } from './camera.js';
 import { Cube, Face } from './cube.js';
-import { createWorld, sortCubesByDistance, calculateDistance } from './world.js';
+import { ChunkManager } from './chunkManager.js';
+import { calculateDistance } from './world.js';
 import { Canvas } from './canvas.js';
 import { project, isFaceVisible } from './utils.js';
 
@@ -11,6 +12,10 @@ const camera: Camera = createCamera();
 const speed: number = 0.1;
 let keys: { [key: string]: boolean } = {};
 let isMouseDown: boolean = false;
+
+const chunkSize = 8;
+const renderDistance = 32 ;
+const chunkManager = new ChunkManager(chunkSize, renderDistance);
 
 function drawFace(face: Face, cube: Cube): void {
   ctx.beginPath();
@@ -85,25 +90,38 @@ function handleKeys(): void {
   }
 }
 
-function renderWorld(world: Cube[]): void {
-  const filteredWorld = world.filter(cube => {
-    const distanceSquared = calculateDistance(cube, camera.position);
-    return distanceSquared <= camera.z_far * camera.z_far;
+// main.ts
+
+function renderWorld(): void {
+  const chunks = chunkManager.getChunksAroundCamera(camera);
+
+  const cubesToRender: { cube: Cube; distanceSquared: number }[] = [];
+
+  chunks.forEach(chunk => {
+    chunk.cubes.forEach(cube => {
+      const distanceSquared = calculateDistance(cube, camera.position);
+      if (distanceSquared <= camera.z_far * camera.z_far) {
+        cubesToRender.push({ cube, distanceSquared });
+      }
+    });
   });
 
-  const sortedWorld = sortCubesByDistance(filteredWorld, camera.position);
+  cubesToRender.sort((a, b) => b.distanceSquared - a.distanceSquared);
 
-  sortedWorld.forEach(cube => {
+  cubesToRender.forEach(({ cube }) => {
     drawCube(cube);
   });
+
+  chunkManager.removeDistantChunks(camera);
 }
 
 function render(): void {
   canvasManager.clear();
   handleKeys();
-  renderWorld(world);
+  renderWorld();
   requestAnimationFrame(render);
 }
+
 
 // Gestion des événements
 window.addEventListener('mousemove', handleMouseMove);
@@ -123,5 +141,4 @@ canvasManager.canvas.addEventListener('mouseleave', () => {
 });
 
 // Initialisation
-const world = createWorld();
 render();
