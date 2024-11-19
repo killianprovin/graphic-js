@@ -11,8 +11,6 @@ export interface Vector3D {
     yaw: number;
     pitch: number;
     fov: number;
-    z_near: number;
-    z_far: number;
   }
   
   export function createCamera(): Camera {
@@ -21,8 +19,6 @@ export interface Vector3D {
       yaw: 0,
       pitch: 0,
       fov: 60,
-      z_near: 0.1,
-      z_far: 64
     };
   }
   

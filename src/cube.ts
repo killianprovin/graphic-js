@@ -1,8 +1,10 @@
 // src/cube.ts
 import { BlockType, getBlockColor } from './block.js';
+import { Chunk } from './world.js';
+import { Vector3D } from './camera.js';
 
 export interface Cube extends CubeTemplate {
-  color: [number, number, number];
+  color: [number, number, number, number];
   blockType: BlockType; // Nouveau champ pour le type de bloc
 }
 

@@ -1,20 +1,20 @@
 import { Camera, createCamera } from './camera.js';
 import { Cube, Face } from './cube.js';
 import { ChunkManager } from './chunkManager.js';
-import { calculateDistance } from './world.js';
+import { calculateDistance, Chunk } from './world.js';
 import { Canvas } from './canvas.js';
-import { project, isFaceVisible } from './utils.js';
+import { project, isFaceVisible, isFaceExposed } from './utils.js';
 
 const canvasManager = new Canvas('canvas');
 const ctx = canvasManager.ctx;
 
 const camera: Camera = createCamera();
-const speed: number = 0.1;
+const speed: number = 0.2;
 let keys: { [key: string]: boolean } = {};
 let isMouseDown: boolean = false;
 
 const chunkSize = 8;
-const renderDistance = 32 ;
+const renderDistance = 64 ;
 const chunkManager = new ChunkManager(chunkSize, renderDistance);
 
 function drawFace(face: Face, cube: Cube): void {
@@ -30,13 +30,13 @@ function drawFace(face: Face, cube: Cube): void {
       ctx.lineTo(projectedPoints[i].x, projectedPoints[i].y);
     }
     ctx.closePath();
-    ctx.fillStyle = `rgb(${cube.color[0]}, ${cube.color[1]}, ${cube.color[2]})`;
+    ctx.fillStyle = `rgba(${cube.color[0]}, ${cube.color[1]}, ${cube.color[2]}, ${cube.color[3]})`;
     ctx.fill();
     ctx.stroke();
   }
 }
 
-function drawCube(cube: Cube): void {
+function drawCube(cube: Cube, chunk: Chunk): void {
   cube.faces.forEach((face) => {
     if (isFaceVisible(face, cube, camera.position)) {
       drawFace(face, cube);
@@ -93,23 +93,21 @@ function handleKeys(): void {
 // main.ts
 
 function renderWorld(): void {
-  const chunks = chunkManager.getChunksAroundCamera(camera);
-
-  const cubesToRender: { cube: Cube; distanceSquared: number }[] = [];
+  const chunks = chunkManager.getChunksAroundCamera(camera, canvasManager);
 
   chunks.forEach(chunk => {
+
+    const cubesToRender: { cube: Cube; distanceSquared: number }[] = [];
+
     chunk.cubes.forEach(cube => {
       const distanceSquared = calculateDistance(cube, camera.position);
-      if (distanceSquared <= camera.z_far * camera.z_far) {
-        cubesToRender.push({ cube, distanceSquared });
-      }
+      cubesToRender.push({ cube, distanceSquared });
     });
-  });
 
-  cubesToRender.sort((a, b) => b.distanceSquared - a.distanceSquared);
-
-  cubesToRender.forEach(({ cube }) => {
-    drawCube(cube);
+    cubesToRender.sort((a, b) => b.distanceSquared - a.distanceSquared);
+    cubesToRender.forEach(({ cube }) => {
+      drawCube(cube, chunk);
+    });
   });
 
   chunkManager.removeDistantChunks(camera);
