@@ -39,9 +39,9 @@ export function project(
 
 // Vérifie si une face est visible
 export function isFaceVisible(face: Face, cube: Cube, cameraPosition: Vector3D): boolean {
-  const p0 = cube.points[face[0]];
-  const p1 = cube.points[face[1]];
-  const p2 = cube.points[face[2]];
+  const p0 = cube.points[face.points[0]];
+  const p1 = cube.points[face.points[1]];
+  const p2 = cube.points[face.points[2]];
 
   const v1 = { x: p1.x - p0.x, y: p1.y - p0.y, z: p1.z - p0.z };
   const v2 = { x: p2.x - p0.x, y: p2.y - p0.y, z: p2.z - p0.z };
@@ -65,9 +65,9 @@ export function isFaceVisible(face: Face, cube: Cube, cameraPosition: Vector3D):
 
 
 function getFaceNormal(face: Face, cube: Cube): Vector3D {
-  const p0 = cube.points[face[0]];
-  const p1 = cube.points[face[1]];
-  const p2 = cube.points[face[2]];
+  const p0 = cube.points[face.points[0]];
+  const p1 = cube.points[face.points[1]];
+  const p2 = cube.points[face.points[2]];
 
   const v1 = {
     x: p1.x - p0.x,
@@ -94,36 +94,4 @@ function getFaceNormal(face: Face, cube: Cube): Vector3D {
     y: normal.y / length,
     z: normal.z / length,
   };
-}
-
-
-export function isFaceExposed(face: Face, cube: Cube, chunk: Chunk): boolean {
-  // Récupérer le centre de la face (le premier sommet)
-  const faceCenter = cube.points[face[0]];
-
-  // Calculer la normale de la face
-  const faceNormal = getFaceNormal(face, cube);
-
-  // Calculer la position du voisin adjacent à la face
-  const neighborPosition = {
-    x: faceCenter.x + faceNormal.x,
-    y: faceCenter.y + faceNormal.y,
-    z: faceCenter.z + faceNormal.z,
-  };
-
-  // Vérifier si un cube opaque (opacité = 1) existe à cette position
-  const neighborCube = chunk.cubes.find(c =>
-    c.points[0].x === neighborPosition.x &&
-    c.points[0].y === neighborPosition.y &&
-    c.points[0].z === neighborPosition.z
-  );
-
-  // Si un cube existe et qu'il est opaque, la face n'est pas exposée
-  if (neighborCube) {
-    const [_, __, ___, alpha] = getBlockColor(neighborCube.blockType);
-    return alpha < 1; // Exposé si l'opacité est inférieure à 1
-  }
-
-  // Si aucun cube n'est présent, la face est exposée
-  return true;
 }

@@ -21,6 +21,7 @@ export class ChunkManager {
 
     // Calculer la portée des chunks à charger
     const chunkRadius = Math.ceil(this.renderDistance / this.chunkSize);
+    const closeRadius = Math.ceil(chunkRadius / 8);
 
     for (let x = c_x - chunkRadius; x <= c_x + chunkRadius; x++) {
       for (let y = c_y - chunkRadius; y <= c_y + chunkRadius; y++) {
@@ -30,8 +31,15 @@ export class ChunkManager {
         // Vérifier si au moins un coin est dans le champ de vision
         const isVisible = chunkCorners.some(corner => this.isPointInCameraView(corner, camera, canvas));
 
-        // Vérifier si le centre du chunk est dans le champ de vision
-        if (isVisible) {
+        // Calculer la distance entre le chunk et la caméra
+        const chunkCenter = { x: x * this.chunkSize + this.chunkSize / 2, y: y * this.chunkSize + this.chunkSize / 2 };
+        const distanceToCamera = Math.sqrt(
+          (chunkCenter.x - camera.position.x) ** 2 +
+          (chunkCenter.y - camera.position.y) ** 2
+        );
+
+        // Inclure le chunk s'il est visible ou dans la zone proche
+        if (isVisible || distanceToCamera <= closeRadius * this.chunkSize) {
           const chunkKey = `${x},${y}`;
           let chunk = this.chunks.get(chunkKey);
           if (!chunk) {

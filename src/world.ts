@@ -61,18 +61,16 @@ export function createChunk(c_x: number, c_y: number, chunkSize: number): Chunk 
       );
       
       if (height < -3){
-        for (let z = height+1; z <= -3; z++) {
+        for (let z_b = height+1; z_b <= -3; z_b++) {
           cubes.push(
             createCube(
               cubeTemplate,
-              { x: worldX, y: worldY, z: z },
+              { x: worldX, y: worldY, z: z_b },
               BlockType.Water
             )
           );
         }
       }
-
-
 
       // Si un arbre doit être placé et que c'est la position choisie
       if (

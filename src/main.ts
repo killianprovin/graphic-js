@@ -3,28 +3,28 @@ import { Cube, Face } from './cube.js';
 import { ChunkManager } from './chunkManager.js';
 import { calculateDistance, Chunk } from './world.js';
 import { Canvas } from './canvas.js';
-import { project, isFaceVisible, isFaceExposed } from './utils.js';
+import { project, isFaceVisible } from './utils.js';
 
 const canvasManager = new Canvas('canvas');
 const ctx = canvasManager.ctx;
 
 const camera: Camera = createCamera();
-const speed: number = 0.2;
+const speed: number = 0.3;
 let keys: { [key: string]: boolean } = {};
 let isMouseDown: boolean = false;
 
 const chunkSize = 8;
-const renderDistance = 64 ;
+const renderDistance = 64;
 const chunkManager = new ChunkManager(chunkSize, renderDistance);
 
 function drawFace(face: Face, cube: Cube): void {
   ctx.beginPath();
 
-  const projectedPoints = face
+  const projectedPoints = face.points
     .map(index => project(cube.points[index], camera, canvasManager.screenWidth, canvasManager.screenHeight))
     .filter((p): p is { x: number; y: number } => p !== null);
 
-  if (projectedPoints.length === face.length) {
+  if (projectedPoints.length === face.points.length) {
     ctx.moveTo(projectedPoints[0].x, projectedPoints[0].y);
     for (let i = 1; i < projectedPoints.length; i++) {
       ctx.lineTo(projectedPoints[i].x, projectedPoints[i].y);
@@ -34,14 +34,6 @@ function drawFace(face: Face, cube: Cube): void {
     ctx.fill();
     ctx.stroke();
   }
-}
-
-function drawCube(cube: Cube, chunk: Chunk): void {
-  cube.faces.forEach((face) => {
-    if (isFaceVisible(face, cube, camera.position)) {
-      drawFace(face, cube);
-    }
-  });
 }
 
 function handleMouseMove(event: MouseEvent): void {
@@ -95,25 +87,58 @@ function handleKeys(): void {
 function renderWorld(): void {
   const chunks = chunkManager.getChunksAroundCamera(camera, canvasManager);
 
+  const cubesToRender: Map<string, Cube> = new Map();
+  const cubesKeys: {x: number, y: number, z: number, distanceSquared: number}[] = [];
+
   chunks.forEach(chunk => {
-
-    const cubesToRender: { cube: Cube; distanceSquared: number }[] = [];
-
     chunk.cubes.forEach(cube => {
       const distanceSquared = calculateDistance(cube, camera.position);
-      cubesToRender.push({ cube, distanceSquared });
-    });
-
-    cubesToRender.sort((a, b) => b.distanceSquared - a.distanceSquared);
-    cubesToRender.forEach(({ cube }) => {
-      drawCube(cube, chunk);
+      const positionKey = `${cube.position.x},${cube.position.y},${cube.position.z}`;
+      cubesToRender.set(positionKey, cube);
+      cubesKeys.push({ x: cube.position.x, y: cube.position.y, z: cube.position.z, distanceSquared });
     });
   });
+
+  cubesKeys.sort((a, b) => b.distanceSquared - a.distanceSquared);
+
+  cubesKeys.forEach(({ x, y, z }) => {
+    const cube = cubesToRender.get(`${x},${y},${z}`);
+    if (cube) {
+      const neighbors = {
+        sup: cubesToRender.get(`${x},${y},${z+1}`),
+        inf: cubesToRender.get(`${x},${y},${z-1}`),
+        left: cubesToRender.get(`${x-1},${y},${z}`),
+        right: cubesToRender.get(`${x+1},${y},${z}`),
+        front: cubesToRender.get(`${x},${y+1},${z}`),
+        back: cubesToRender.get(`${x},${y-1},${z}`)
+      };
+  
+      const faces = [
+        { neighbor: neighbors.front, face: cube.faces[0] },
+        { neighbor: neighbors.left, face: cube.faces[1] },
+        { neighbor: neighbors.back, face: cube.faces[2] },
+        { neighbor: neighbors.right, face: cube.faces[3] },
+        { neighbor: neighbors.sup, face: cube.faces[4] },
+        { neighbor: neighbors.inf, face: cube.faces[5] }
+      ];
+  
+      faces.forEach(({ neighbor, face }) => {
+        if (
+          (neighbor == undefined || (neighbor.blockType != cube.blockType && neighbor.color[3] < 1)) &&
+          isFaceVisible(face, cube, camera.position)
+        ) {
+          drawFace(face, cube);
+        }
+      });
+    }
+  });
+  
 
   chunkManager.removeDistantChunks(camera);
 }
 
 function render(): void {
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
   canvasManager.clear();
   handleKeys();
   renderWorld();
