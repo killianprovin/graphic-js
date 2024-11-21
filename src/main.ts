@@ -4,6 +4,7 @@ import { ChunkManager } from './chunkManager.js';
 import { calculateDistance, Chunk } from './world.js';
 import { Canvas } from './canvas.js';
 import { project, isFaceVisible } from './utils.js';
+import { BlockType } from './block.js';
 
 const canvasManager = new Canvas('canvas');
 const ctx = canvasManager.ctx;
@@ -14,7 +15,7 @@ let keys: { [key: string]: boolean } = {};
 let isMouseDown: boolean = false;
 
 const chunkSize = 8;
-const renderDistance = 64;
+const renderDistance = 96;
 const chunkManager = new ChunkManager(chunkSize, renderDistance);
 
 function drawFace(face: Face, cube: Cube): void {
@@ -88,51 +89,66 @@ function renderWorld(): void {
   const chunks = chunkManager.getChunksAroundCamera(camera, canvasManager);
 
   const cubesToRender: Map<string, Cube> = new Map();
-  const cubesKeys: {x: number, y: number, z: number, distanceSquared: number}[] = [];
-
+  const cubesKeys: {cube: Cube, distanceSquared: number }[] = [];
+  
   chunks.forEach(chunk => {
     chunk.cubes.forEach(cube => {
       const distanceSquared = calculateDistance(cube, camera.position);
       const positionKey = `${cube.position.x},${cube.position.y},${cube.position.z}`;
       cubesToRender.set(positionKey, cube);
-      cubesKeys.push({ x: cube.position.x, y: cube.position.y, z: cube.position.z, distanceSquared });
+      cubesKeys.push({cube, distanceSquared });
     });
-  });
+  });  
 
   cubesKeys.sort((a, b) => b.distanceSquared - a.distanceSquared);
 
-  cubesKeys.forEach(({ x, y, z }) => {
-    const cube = cubesToRender.get(`${x},${y},${z}`);
-    if (cube) {
-      const neighbors = {
-        sup: cubesToRender.get(`${x},${y},${z+1}`),
-        inf: cubesToRender.get(`${x},${y},${z-1}`),
-        left: cubesToRender.get(`${x-1},${y},${z}`),
-        right: cubesToRender.get(`${x+1},${y},${z}`),
-        front: cubesToRender.get(`${x},${y+1},${z}`),
-        back: cubesToRender.get(`${x},${y-1},${z}`)
-      };
-  
-      const faces = [
-        { neighbor: neighbors.front, face: cube.faces[0] },
-        { neighbor: neighbors.left, face: cube.faces[1] },
-        { neighbor: neighbors.back, face: cube.faces[2] },
-        { neighbor: neighbors.right, face: cube.faces[3] },
-        { neighbor: neighbors.sup, face: cube.faces[4] },
-        { neighbor: neighbors.inf, face: cube.faces[5] }
-      ];
-  
-      faces.forEach(({ neighbor, face }) => {
-        if (
-          (neighbor == undefined || (neighbor.blockType != cube.blockType && neighbor.color[3] < 1)) &&
-          isFaceVisible(face, cube, camera.position)
-        ) {
-          drawFace(face, cube);
-        }
-      });
-    }
+  cubesKeys.forEach(({ cube }) => {
+    const { x, y, z } = cube.position;
+    const neighbors = {
+      sup: cubesToRender.get(`${x},${y},${z+1}`),
+      inf: cubesToRender.get(`${x},${y},${z-1}`),
+      left: cubesToRender.get(`${x-1},${y},${z}`),
+      right: cubesToRender.get(`${x+1},${y},${z}`),
+      front: cubesToRender.get(`${x},${y+1},${z}`),
+      back: cubesToRender.get(`${x},${y-1},${z}`)
+    };
+
+    const faces = [
+      { neighbor: neighbors.front, face: cube.faces[0] },
+      { neighbor: neighbors.left, face: cube.faces[1] },
+      { neighbor: neighbors.back, face: cube.faces[2] },
+      { neighbor: neighbors.right, face: cube.faces[3] },
+      { neighbor: neighbors.sup, face: cube.faces[4] },
+      { neighbor: neighbors.inf, face: cube.faces[5] }
+    ];
+
+    faces.forEach(({ neighbor, face }) => {
+      if (!face.exposed) return; // Ignore les faces déjà marquées comme non exposées
+      
+      const isHiddenByNeighbor = neighbor && (neighbor.blockType == cube.blockType || neighbor.color[3] == 1);
+    
+      if (isHiddenByNeighbor) {
+        face.exposed = false; // Marque la face comme non exposée pour cette session
+        return; // Saute cette face
+      }
+    
+      if (isFaceVisible(face, cube, camera.position)) {
+        drawFace(face, cube);
+      }
+    });
   });
   
+
+  /*
+
+        if (
+        (face.exposed) && (neighbor == undefined || (neighbor.blockType != cube.blockType && neighbor.color[3] < 1)) &&
+        isFaceVisible(face, cube, camera.position)
+      ) {
+        drawFace(face, cube);
+      }
+
+  */
 
   chunkManager.removeDistantChunks(camera);
 }

@@ -58,7 +58,7 @@ export function createCube(
 ): Cube {
 
   const position = {x: template.position.x + pos.x, y: template.position.y + pos.y, z: template.position.z + pos.z};
-  
+
   const points = template.points.map(point => ({
     x: point.x + pos.x,
     y: point.y + pos.y,
@@ -66,12 +66,14 @@ export function createCube(
   }));
 
   const color = getBlockColor(blockType);
+  
+  const faces = template.faces.map(face => ({...face}));
 
   return {
     position,
     points,
     edges: template.edges,
-    faces: template.faces,
+    faces: faces,
     color,
     blockType
   };
